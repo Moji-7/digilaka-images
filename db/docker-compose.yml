@@ -1,0 +1,28 @@
+version: '3'
+services:
+
+  mysql:
+    image: mysql:8.0 # change this to the MySQL version you want
+    command: --default-authentication-plugin=mysql_native_password --general_log=1 --general_log_file=/var/log/mysql/mysql.log # add these options to enable logging
+    environment:
+      - MYSQL_ROOT_PASSWORD=root # change this to the root password you want
+      - MYSQL_DATABASE=usersdb # change this to the database name you want
+      # - MYSQL_USER=root # change this to the user name you want
+      # - MYSQL_PASSWORD=root # change this to the user password you want
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4 # change this to the character set you want
+      - MYSQL_COLLATION_SERVER=utf8mb4_persian_ci # change this to the collation you want
+      - MYSQL_INIT_CONNECT=SET NAMES UTF8MB4 # change this to the initial SQL statement you want
+    ports:
+      - 3306:3306 # change this if you want a different port mapping
+    volumes:
+      - mysql_data:/var/lib/mysql # change this if you want a different volume mapping
+      - ./log:/var/log/mysql # add this to mount the log directory
+    networks:
+      - todo-app # change this if you want a different network name
+
+
+volumes:
+  mysql_data: {} # change this if you want a different named volume for MySQL data
+
+networks:
+  todo-app: {} # change this if you want a different custom network for todo-app

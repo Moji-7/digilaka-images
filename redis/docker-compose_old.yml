@@ -1,0 +1,33 @@
+version: '3'
+services:
+  redis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data:/data
+      - ./modules:/modules # Mount the modules folder to the container
+    networks:
+      - default
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      REDIS_HOSTS: redis
+      REDIS_HOST: redis
+      REDIS_PORT: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      HTTP_USER: root
+      HTTP_PASSWORD: root
+    ports:
+      - 8081:8081
+    depends_on:
+      - redis
+      - redis-json # Optionally, you can also make the redis-commander service depend on the redis-json service
+    networks: 
+      - default

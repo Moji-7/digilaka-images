@@ -1,0 +1,54 @@
+version: '3'
+services:
+  db:
+    image: postgres:13 # change this to the PostgreSQL version you want
+    environment:
+      - POSTGRES_PASSWORD=secret # change this to the password you want
+      - POSTGRES_DB=todos # change this to the database name you want
+    ports:
+      - 5432:5432 # change this if you want a different port mapping
+    volumes:
+      - db_data:/var/lib/postgresql/data # change this if you want a different volume mapping
+    networks:
+      - todo-app # change this if you want a different network name
+
+  mysql:
+    image: mysql:8.0 # change this to the MySQL version you want
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_ROOT_PASSWORD=root # change this to the root password you want
+      - MYSQL_DATABASE=usersdb # change this to the database name you want
+      # - MYSQL_USER=root # change this to the user name you want
+      # - MYSQL_PASSWORD=root # change this to the user password you want
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4 # change this to the character set you want
+      - MYSQL_COLLATION_SERVER=utf8mb4_persian_ci # change this to the collation you want
+      - MYSQL_INIT_CONNECT=SET NAMES UTF8MB4 # change this to the initial SQL statement you want
+    ports:
+      - 3306:3306 # change this if you want a different port mapping
+    volumes:
+      - mysql_data:/var/lib/mysql # change this if you want a different volume mapping
+    networks:
+      - todo-app # change this if you want a different network name
+
+  mongodb:
+    image: mongo:latest # change this to the MongoDB version you want
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root # change this to the root user name you want
+      - MONGO_INITDB_ROOT_PASSWORD=root # change this to the root password you want
+      - MONGO_INITDB_DATABASE=todos # change this to the database name you want
+      - MONGO_INITDB_SCRIPTS_DIR=/data/application # change this to the directory where your init file is located
+    ports:
+      - 27017:27017 # change this if you want a different port mapping
+    volumes:
+      - mongodb_data:/data/db # change this if you want a different volume mapping
+      - ./init.js:/data/application/init.js # change this to the path of your init file on the host machine
+    networks:
+      - todo-app # change this if you want a different network name
+
+volumes:
+  db_data: {} # change this if you want a different named volume for db data
+  mysql_data: {} # change this if you want a different named volume for MySQL data
+  mongodb_data: {} # change this if you want a different named volume for MongoDB data
+
+networks:
+  todo-app: {} # change this if you want a different custom network for todo-app

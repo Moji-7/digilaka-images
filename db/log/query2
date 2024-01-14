@@ -1,0 +1,134 @@
+DELIMITER //
+
+CREATE PROCEDURE populate_orders_products_categories_info (
+  IN item_category2 NVARCHAR (110),
+  IN item_category3 NVARCHAR (110) 
+)
+BEGIN
+SELECT
+    JSON_EXTRACT(order_content, '$.order_item[0].product.data_layer.item_category2') COLLATE utf8mb4_persian_ci AS item_category2,
+    JSON_EXTRACT(order_content, '$.order_item[0].product.data_layer.item_category3') COLLATE utf8mb4_persian_ci AS item_category3,
+    COUNT(order_content->>'$.order_item[0].price.payable_price') AS count,
+    MAX(order_content->>'$.order_item[0].price.payable_price') AS max_price,
+    ROUND(AVG(order_content->>'$.order_item[0].price.payable_price'),2) AS avg_price,
+    SUM(order_content->>'$.order_item[0].price.payable_price') AS total_price,
+    ROUND(AVG(discount_percent),2) AS avg_discount
+FROM orders,
+    JSON_TABLE (
+        order_content->'$.order_item[0]',
+        '$'
+        COLUMNS (
+            discount_percent DECIMAL (10,2) PATH '$.price.discount_percent'
+        )
+    ) AS jt
+WHERE
+    (JSON_CONTAINS(order_content, JSON_VALUE(CAST(CONCAT('\"', item_category2, '\"') AS JSON), '$'), '$.order_item[0].product.data_layer.item_category2') OR item_category2 IS NULL)
+    AND
+    (JSON_CONTAINS(order_content, JSON_VALUE(CAST(CONCAT('\"', item_category3, '\"') AS JSON), '$'), '$.order_item[0].product.data_layer.item_category3') OR item_category3 IS NULL)
+GROUP BY item_category2, item_category3, order_content;
+
+
+END //
+
+
+WHERE
+    (JSON_CONTAINS(order_content, CAST(CONCAT('\"', item_category2, '\"') AS JSON), '$.order_item[*].product.data_layer.item_category2') OR item_category2 IS NULL)
+    AND
+    (JSON_CONTAINS(order_content, CAST(CONCAT('\"', item_category3, '\"') AS JSON), '$.order_item[*].product.data_layer.item_category3') OR item_category3 IS NULL)
+GROUP BY item_category2, item_category3, order_content;
+
+
+CALL
+call  populate_orders_products_categories_info(NULL,'تنقلات'); //
+call  populate_orders_products_categories_info(NULL,NULL);
+drop procedure populate_orders_products_categories_info;
+
+ALTER DATABASE digikala CHARACTER SET utf8mb4 COLLATE utf8mb4_persian_ci;
+ALTER TABLE orders CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_persian_ci;
+ALTER TABLE populate_orders_products_categories_info_old CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_persian_ci;
+
+
+docker exec -it db-mysql-1 mysql -u root -p -e "SET NAMES 'utf8mb4'; SET CHARACTER SET utf8mb4; SET collation_connection = 'utf8mb4_persian_ci';"
+thnaks now i developed nest.js api to call the prior procedure as
+call  populate_orders_products_categories_info_old(NULL,'تنقلات');
+in my nest.js s controller i have this
+ @Get('populate_orders_products_categories_info')
+  async get_populate_orders_products_categories_info(
+    @Query('item_category2') item_category2: string | null,
+    @Query('item_category3') item_category3: string | null,
+  ): Promise<populateOrdersProductsCategoriesInfo[]> {
+    this.logger.log(' item_category2 is: ' + item_category2 +'3 is: '+item_category3);
+    return this.hamechidunService.get_populate_orders_products_categories_info(
+      item_category2,
+      item_category3
+    );
+  }
+  and in my nest.js service i have this
+   async get_populate_orders_products_categories_info(
+    item_category2: string | null, item_category3: string | null
+  ): Promise<populateOrdersProductsCategoriesInfo[]> {
+    this.logger.log(' item_category2 is: ' + item_category2 +'3 is: '+item_category3);
+    
+    return this.topSellingProductRepository.query(
+      'CALL populate_orders_products_categories_info(?,?);',[item_category2, item_category3]
+    );
+  }
+  but when i call the api (http://localhost:3222/hamechidun/populate_orders_products_categories_info?item_category2=NULL&item_category3=تنقلات) it raise error as 
+  [Nest] 21120  - 01/06/2024, 3:11:33 PM   ERROR [ExceptionsHandler] In this situation, path expressions may not contain the * and ** tokens or an array range.
+QueryFailedError: In this situation, path expressions may not contain the * and ** tokens or an array range.
+    at Query.onResult (C:\trade-me\telescope\nedook\apiScrap\level2\digikala-api\src\driver\mysql\MysqlQueryRunner.ts:222:33)
+    at Query.execute (C:\trade-me\telescope\nedook\apiScrap\level2\digikala-api\node_modules\mysql\lib\commands\command.js:36:14)
+    at PoolConnection.handlePacket (C:\trade-me\telescope\nedook\apiScrap\level2\digikala-api\node_modules\mysql\lib\connection.js:478:34)
+
+
+
+docker exec -it db-mysql-1 bash
+apt-get update
+apt-get install vim
+apt-get install locales
+dpkg-reconfigure locales # select 376 for ru_RU.UTF-8
+echo "export LANG=ru_RU.utf8" >> ~/.bashrc
+echo "export LANGUAGE=ru_RU.utf8" >> ~/.bashrc
+echo "export LC_ALL=ru_RU.utf8" >> ~/.bashrc
+exit
+docker restart db-mysql-1
+
+I hope this helps you with your MySQL database. If you have an
+
+
+please consider this procedure
+DELIMITER //
+
+CREATE PROCEDURE populate_orders_products_categories_info_old (
+  IN item_category2 NVARCHAR (110),
+  IN item_category3 NVARCHAR (110) 
+)
+BEGIN
+SELECT
+    JSON_UNQUOTE(order_content->'$.order_item[0].product.data_layer.item_category2') AS item_category2,
+    JSON_UNQUOTE(order_content->'$.order_item[0].product.data_layer.item_category3') AS item_category3,
+    COUNT(order_content->>'$.payable_price') AS count,
+    MAX(order_content->>'$.payable_price') AS max_price,
+    ROUND(AVG(order_content->>'$.payable_price'),2) AS avg_price,
+    SUM(order_content->>'$.payable_price') AS total_price,
+    ROUND(AVG(discount_percent),2) AS avg_discount
+FROM orders,
+    JSON_TABLE (
+        order_content->'$.order_item',
+        '$[*]'
+        COLUMNS (
+            discount_percent DECIMAL (10,2) PATH '$.price.discount_percent'
+        )
+    ) AS jt
+WHERE
+    (item_category2 LIKE CONCAT ('%', order_content->'$.order_item[*].product.data_layer.item_category2', '%') OR item_category2 IS NULL)
+    AND
+    (item_category3 LIKE CONCAT ('%', order_content->'$.order_item[*].product.data_layer.item_category3', '%') OR item_category3 IS NULL)
+GROUP BY item_category2, item_category3, order_content;
+
+END //
+
+when i call it as 
+CALL populate_orders_products_categories_info(NULL, "فرآورده‌های منجمد و یخچالی")
+it return null but it should base on values.
+i think that chars are persian so i should add N before chenkings in where clause

@@ -1,0 +1,13 @@
+version: '3'
+services:
+  redis:
+    image: redis/redis-stack # Use the redis/redis-stack image
+    ports:
+      - "6379:6379"
+      - "8001:8001" # Expose the port for RedisInsight
+    volumes:
+      - ./data:/data
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: redis-server --loadmodule /opt/redis-stack/lib/redisearch.so --loadmodule /opt/redis-stack/lib/rejson.so # Add this line
+    build: . # Add this line to build your Dockerfile
